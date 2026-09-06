@@ -1,3 +1,4 @@
+import { AlertaOrmEntity } from '../../../alertas/infrastructure/persistence/alerta.orm-entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
@@ -66,7 +67,12 @@ export class ReporteRepository implements ReporteRepositoryPort {
     const qb = this.repository
       .createQueryBuilder('reporte')
       .leftJoinAndSelect('reporte.autor', 'autor')
-      .loadRelationCountAndMap('reporte.totalAlertas', 'reporte.alertas');
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(alerta.id)')
+          .from(AlertaOrmEntity, 'alerta')
+          .where('alerta.reporteId = reporte.id');
+      }, 'alertasCount');
 
     this.applyFilters(qb, params);
 
@@ -75,16 +81,17 @@ export class ReporteRepository implements ReporteRepositoryPort {
     } else if (params.ordenacao === 'recentes') {
       qb.orderBy('reporte.createdAt', 'DESC');
     } else {
-      qb.orderBy('totalAlertas', 'DESC').addOrderBy('reporte.createdAt', 'DESC');
+      qb.orderBy('alertasCount', 'DESC').addOrderBy('reporte.createdAt', 'DESC');
     }
 
     qb.skip((params.page - 1) * params.limit).take(params.limit);
 
-    const entities = await qb.getMany();
+    const { entities, raw } = await qb.getRawAndEntities();
     const items: Reporte[] = [];
 
-    for (const entity of entities) {
-      const totalAlertas = (entity as ReporteWithCount).totalAlertas ?? 0;
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      const totalAlertas = parseInt(raw[i]?.alertasCount ?? '0', 10);
       const jaAlertado = params.usuarioId
         ? await this.hasAlerta(params.usuarioId, entity.id)
         : false;

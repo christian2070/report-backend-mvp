@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cidades-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: cidades_inteligentes
+      MYSQL_USER: cidades
+      MYSQL_PASSWORD: cidades123
+    ports:
+      - '3307:3306'
+    volumes:
+      - cidades_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'cidades', '-pcidades123']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cidades_mysql_data:
