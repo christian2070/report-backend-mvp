@@ -1,7 +1,24 @@
 import { Reporte } from '../../domain/entities/reporte.entity';
+import type { CategoriaReporte } from '../../../common/domain/enums/categoria-reporte.enum';
+import type { StatusReporte } from '../../../common/domain/enums/status-reporte.enum';
+
+export interface ReporteResponse {
+  id: string;
+  foto: string;
+  descricao: string;
+  categoria: CategoriaReporte;
+  localizacao: string;
+  status: StatusReporte;
+  totalAlertas: number;
+  createdAt: Date;
+  updatedAt: Date;
+  autorId?: string;
+  autor?: { id: string; nome: string };
+  jaAlertado?: boolean;
+}
 
 export function toReporteResponse(reporte: Reporte, includeAutorId = false) {
-  const base: Record<string, unknown> = {
+  const base: ReporteResponse = {
     id: reporte.id,
     foto: reporte.foto,
     descricao: reporte.descricao,
@@ -10,6 +27,7 @@ export function toReporteResponse(reporte: Reporte, includeAutorId = false) {
     status: reporte.status,
     totalAlertas: reporte.totalAlertas ?? 0,
     createdAt: reporte.createdAt,
+    updatedAt: reporte.updatedAt,
   };
 
   if (includeAutorId) {

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { UpdateMeUseCase } from './application/use-cases/update-me.use-case';
+import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -22,7 +24,8 @@ import { AuthController } from './presentation/auth.controller';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') ?? 'change-me',
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '7d') as `${number}d`,
+          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ??
+            '7d') as `${number}d`,
         },
       }),
     }),
@@ -32,6 +35,8 @@ import { AuthController } from './presentation/auth.controller';
     RegisterCidadaoUseCase,
     LoginUseCase,
     GetMeUseCase,
+    UpdateMeUseCase,
+    ChangePasswordUseCase,
     JwtStrategy,
     {
       provide: USUARIO_REPOSITORY,

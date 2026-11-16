@@ -12,6 +12,9 @@ import {
   ReporteRepositoryPort,
 } from '../../domain/ports/reporte.repository.port';
 import { ReporteOrmEntity } from './reporte.orm-entity';
+import type { UpdateReporteData } from '../../domain/ports/reporte.repository.port';
+import { authorizeReporte } from '../../domain/authorize-reporte';
+import { PendingFileDeletionOrmEntity } from '../file-storage/pending-file-deletion.orm-entity';
 
 type ReporteWithCount = ReporteOrmEntity & { totalAlertas?: number };
 
@@ -35,7 +38,10 @@ export class ReporteRepository implements ReporteRepositoryPort {
     return this.toDomain(saved, 0, false);
   }
 
-  async findById(id: string, usuarioId?: string | null): Promise<Reporte | null> {
+  async findById(
+    id: string,
+    usuarioId?: string | null,
+  ): Promise<Reporte | null> {
     const entity = await this.repository.findOne({
       where: { id },
       relations: ['autor'],
@@ -52,9 +58,7 @@ export class ReporteRepository implements ReporteRepositoryPort {
       .getOne();
 
     const totalAlertas = (withCount as ReporteWithCount)?.totalAlertas ?? 0;
-    const jaAlertado = usuarioId
-      ? await this.hasAlerta(usuarioId, id)
-      : false;
+    const jaAlertado = usuarioId ? await this.hasAlerta(usuarioId, id) : false;
 
     return this.toDomain(entity, totalAlertas, jaAlertado);
   }
@@ -81,12 +85,17 @@ export class ReporteRepository implements ReporteRepositoryPort {
     } else if (params.ordenacao === 'recentes') {
       qb.orderBy('reporte.createdAt', 'DESC');
     } else {
-      qb.orderBy('alertasCount', 'DESC').addOrderBy('reporte.createdAt', 'DESC');
+      qb.orderBy('alertasCount', 'DESC').addOrderBy(
+        'reporte.createdAt',
+        'DESC',
+      );
     }
 
     qb.skip((params.page - 1) * params.limit).take(params.limit);
 
-    const { entities, raw } = await qb.getRawAndEntities();
+    const { entities, raw } = await qb.getRawAndEntities<{
+      alertasCount?: string;
+    }>();
     const items: Reporte[] = [];
 
     for (let i = 0; i < entities.length; i++) {
@@ -158,6 +167,63 @@ export class ReporteRepository implements ReporteRepositoryPort {
     return this.repository.count();
   }
 
+  async updateOwned(
+    id: string,
+    autorId: string,
+    data: UpdateReporteData,
+  ): Promise<Reporte> {
+    return this.repository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(ReporteOrmEntity);
+      const current = await repository.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      authorizeReporte(current, autorId, true);
+      // Explicit allowlist: status, author, confirmations and creation date are immutable here.
+      const changes = {
+        ...(data.foto !== undefined ? { foto: data.foto } : {}),
+        ...(data.descricao !== undefined ? { descricao: data.descricao } : {}),
+        ...(data.categoria !== undefined ? { categoria: data.categoria } : {}),
+        ...(data.localizacao !== undefined
+          ? { localizacao: data.localizacao }
+          : {}),
+      };
+      if (Object.keys(changes).length) await repository.update(id, changes);
+      if (data.foto && data.foto !== current.foto) {
+        await manager.insert(PendingFileDeletionOrmEntity, {
+          path: current.foto,
+        });
+      }
+      const updated = await repository.findOneOrFail({
+        where: { id },
+        relations: ['autor'],
+      });
+      const total = await manager.count(AlertaOrmEntity, {
+        where: { reporteId: id },
+      });
+      const confirmed = await manager.count(AlertaOrmEntity, {
+        where: { reporteId: id, usuarioId: autorId },
+      });
+      return this.toDomain(updated, total, confirmed > 0);
+    });
+  }
+
+  async deleteOwned(id: string, autorId: string): Promise<void> {
+    await this.repository.manager.transaction(async (manager) => {
+      const current = await manager.findOne(ReporteOrmEntity, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      authorizeReporte(current, autorId, false);
+      await manager.delete(AlertaOrmEntity, { reporteId: id });
+      await manager.delete(ReporteOrmEntity, { id });
+      // Defer physical removal until commit; a rollback leaves the original image intact.
+      await manager.insert(PendingFileDeletionOrmEntity, {
+        path: current.foto,
+      });
+    });
+  }
+
   private applyFilters(
     qb: SelectQueryBuilder<ReporteOrmEntity>,
     params: ListarReportesParams,
@@ -187,7 +253,10 @@ export class ReporteRepository implements ReporteRepositoryPort {
     }
   }
 
-  private async hasAlerta(usuarioId: string, reporteId: string): Promise<boolean> {
+  private async hasAlerta(
+    usuarioId: string,
+    reporteId: string,
+  ): Promise<boolean> {
     const count = await this.repository.manager
       .createQueryBuilder()
       .select('1')

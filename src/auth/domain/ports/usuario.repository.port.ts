@@ -14,6 +14,15 @@ export interface UsuarioRepositoryPort {
   findById(id: string): Promise<Usuario | null>;
   create(data: CreateUsuarioData): Promise<Usuario>;
   existsByEmail(email: string): Promise<boolean>;
+  updateProfile(
+    id: string,
+    data: { nome?: string; email?: string; bairro?: string | null },
+  ): Promise<Usuario>;
+  updatePassword(
+    id: string,
+    currentHash: string,
+    newHash: string,
+  ): Promise<boolean>;
 }
 
 export const USUARIO_REPOSITORY = Symbol('USUARIO_REPOSITORY');

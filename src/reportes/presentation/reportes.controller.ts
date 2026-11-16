@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -13,6 +14,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { EditarReporteDto } from '../application/dto/editar-reporte.dto';
+import { EditarReporteUseCase } from '../application/use-cases/editar-reporte.use-case';
+import { ExcluirReporteUseCase } from '../application/use-cases/excluir-reporte.use-case';
 import {
   CriarAlertaUseCase,
   RemoverAlertaUseCase,
@@ -45,6 +49,8 @@ export class ReportesController {
     private readonly alterarStatusUseCase: AlterarStatusUseCase,
     private readonly criarAlertaUseCase: CriarAlertaUseCase,
     private readonly removerAlertaUseCase: RemoverAlertaUseCase,
+    private readonly editarReporteUseCase: EditarReporteUseCase,
+    private readonly excluirReporteUseCase: ExcluirReporteUseCase,
   ) {}
 
   @Post()
@@ -98,13 +104,36 @@ export class ReportesController {
     return this.alterarStatusUseCase.execute(id, dto);
   }
 
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, TipoUsuarioGuard)
+  @RequireTipo(TipoUsuario.CIDADAO)
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  editar(
+    @Param('id') id: string,
+    @Body() dto: EditarReporteDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() foto?: Express.Multer.File,
+  ) {
+    return this.editarReporteUseCase.execute(id, dto, user, foto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard, TipoUsuarioGuard)
+  @RequireTipo(TipoUsuario.CIDADAO)
+  excluir(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.excluirReporteUseCase.execute(id, user);
+  }
+
   @Post(':id/alertas')
   @UseGuards(JwtAuthGuard, TipoUsuarioGuard)
   @RequireTipo(TipoUsuario.CIDADAO)
-  criarAlerta(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  criarAlerta(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.criarAlertaUseCase.execute(id, user.id);
   }
 

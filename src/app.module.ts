@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PendingFileDeletionOrmEntity } from './reportes/infrastructure/file-storage/pending-file-deletion.orm-entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertaOrmEntity } from './alertas/infrastructure/persistence/alerta.orm-entity';
@@ -22,7 +23,12 @@ import { ReportesModule } from './reportes/reportes.module';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [UsuarioOrmEntity, ReporteOrmEntity, AlertaOrmEntity],
+        entities: [
+          UsuarioOrmEntity,
+          ReporteOrmEntity,
+          AlertaOrmEntity,
+          PendingFileDeletionOrmEntity,
+        ],
         synchronize: configService.get<boolean>('database.synchronize'),
       }),
     }),

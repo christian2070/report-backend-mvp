@@ -2,6 +2,18 @@
 
 API REST para rede social de reporte de problemas urbanos. Cidadãos publicam reportes com foto; a prefeitura gerencia status e acompanha métricas no dashboard.
 
+## Edição de reportes e perfil
+
+Os endpoints autenticados `PATCH /api/reportes/:id` e `DELETE /api/reportes/:id` permitem editar/excluir apenas reportes do próprio cidadão. Reportes resolvidos não podem ser editados. A edição aceita `descricao`, `categoria`, `localizacao` e `foto` opcional via multipart; a exclusão retorna `204`.
+
+`PATCH /api/auth/me` atualiza `nome`, `email` e `bairro` opcional do cidadão. O ID vem exclusivamente do JWT; dados protegidos são rejeitados. E-mail de outro usuário retorna `409`.
+
+`PATCH /api/auth/me/password` recebe `senhaAtual`, `novaSenha` e `confirmarNovaSenha`, valida a senha atual e a confirmação, e grava bcrypt sem invalidar o JWT. A nova senha exige ao menos 6 caracteres. Senha atual incorreta retorna `400`.
+
+A migration `1794860000000-PendingFileDeletions.ts` é obrigatória. Ela cria uma fila de limpeza de fotos: o registro da limpeza é confirmado junto com a alteração/exclusão do reporte; o arquivo só é removido depois do commit. Falhas de filesystem são repetidas na inicialização e a cada 60 segundos. Confirmações e reporte são excluídos na mesma transação, com autorização verificada sob bloqueio de escrita.
+
+Execute `npm test -- --runInBand` para as 5 suítes de unidade/HTTP. Para integração real, configure `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER` e `TEST_DB_PASSWORD` para uma instância MySQL de testes e execute `npm run test:integration`. A conta precisa criar/remover bancos: a suíte cria `report_features_test_*`, aplica migrations com sincronização desativada e remove o banco ao terminar, sem usar `DB_NAME`. O Jest executa com suporte a módulos VM/ESM para as dependências instaladas.
+
 ## Stack
 
 - NestJS (arquitetura hexagonal)
@@ -36,13 +48,9 @@ CREATE DATABASE cidades_inteligentes CHARACTER SET utf8mb4 COLLATE utf8mb4_unico
 
 4. Configure as variáveis em `.env` (host, usuário, senha do MySQL, `JWT_SECRET`, etc.).
 
-5. Sincronize o schema (dev) **ou** rode a migration:
+5. Rode as migrations antes de iniciar a aplicação, incluindo a fila de limpeza de fotos usada na edição e exclusão de reportes:
 
 ```bash
-# Opção A — dev rápido (DB_SYNCHRONIZE=true no .env)
-npm run start:dev
-
-# Opção B — migration explícita
 npm run typeorm:migration:run
 ```
 

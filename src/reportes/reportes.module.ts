@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { EditarReporteUseCase } from './application/use-cases/editar-reporte.use-case';
+import { ExcluirReporteUseCase } from './application/use-cases/excluir-reporte.use-case';
+import { FileCleanupService } from './infrastructure/file-storage/file-cleanup.service';
+import { PendingFileDeletionOrmEntity } from './infrastructure/file-storage/pending-file-deletion.orm-entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertaOrmEntity } from '../alertas/infrastructure/persistence/alerta.orm-entity';
 import { ALERTA_REPOSITORY } from '../alertas/domain/ports/alerta.repository.port';
@@ -23,12 +27,19 @@ import { ReportesController } from './presentation/reportes.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ReporteOrmEntity, AlertaOrmEntity]),
+    TypeOrmModule.forFeature([
+      ReporteOrmEntity,
+      AlertaOrmEntity,
+      PendingFileDeletionOrmEntity,
+    ]),
     CommonModule,
   ],
   controllers: [ReportesController],
   providers: [
     CriarReporteUseCase,
+    EditarReporteUseCase,
+    ExcluirReporteUseCase,
+    FileCleanupService,
     ListarReportesUseCase,
     ListarResolvidosUseCase,
     GetReporteUseCase,

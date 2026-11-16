@@ -22,6 +22,13 @@ export interface ListarReportesParams {
   usuarioId?: string | null;
 }
 
+export interface UpdateReporteData {
+  foto?: string;
+  descricao?: string;
+  categoria?: CategoriaReporte;
+  localizacao?: string;
+}
+
 export interface PaginatedReportes {
   items: Reporte[];
   total: number;
@@ -32,6 +39,12 @@ export interface ReporteRepositoryPort {
   findById(id: string, usuarioId?: string | null): Promise<Reporte | null>;
   listar(params: ListarReportesParams): Promise<PaginatedReportes>;
   updateStatus(id: string, status: StatusReporte): Promise<Reporte>;
+  updateOwned(
+    id: string,
+    autorId: string,
+    data: UpdateReporteData,
+  ): Promise<Reporte>;
+  deleteOwned(id: string, autorId: string): Promise<void>;
   countByStatus(): Promise<Record<StatusReporte, number>>;
   countByCategoria(): Promise<Record<CategoriaReporte, number>>;
   countTotal(): Promise<number>;

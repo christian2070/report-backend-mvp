@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../../domain/entities/usuario.entity';
@@ -52,5 +56,39 @@ export class UsuarioRepository implements UsuarioRepositoryPort {
       entity.bairro,
       entity.createdAt,
     );
+  }
+
+  async updateProfile(
+    id: string,
+    data: { nome?: string; email?: string; bairro?: string | null },
+  ): Promise<Usuario> {
+    try {
+      if (Object.keys(data).length) await this.repository.update(id, data);
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ER_DUP_ENTRY'
+      ) {
+        throw new ConflictException('E-mail já cadastrado');
+      }
+      throw error;
+    }
+    const updated = await this.findById(id);
+    if (!updated) throw new NotFoundException('Usuário não encontrado');
+    return updated;
+  }
+
+  async updatePassword(
+    id: string,
+    currentHash: string,
+    newHash: string,
+  ): Promise<boolean> {
+    const result = await this.repository.update(
+      { id, senha: currentHash },
+      { senha: newHash },
+    );
+    return (result.affected ?? 0) > 0;
   }
 }
