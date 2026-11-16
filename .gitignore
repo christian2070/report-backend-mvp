@@ -42,3 +42,6 @@ Thumbs.db
 .temp/
 tmp/
 *.md
+!docs/
+!docs/reportes-demo.md
+!docs/reportes-demo-resultado.md

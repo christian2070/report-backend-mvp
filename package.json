@@ -20,6 +20,8 @@
     "test:e2e": "npm run test -- --config ./test/jest-e2e.json",
     "test:integration": "npm run test -- --config ./test/jest-integration.json --runInBand",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/prefeitura.seed.ts",
+    "seed:reportes-demo": "ts-node -r tsconfig-paths/register src/database/seeds/reportes-demo.seed.ts",
+    "seed:reportes-demo:verify": "ts-node -r tsconfig-paths/register src/database/seeds/verify-reportes-demo.ts",
     "typeorm:migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/typeorm.config.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

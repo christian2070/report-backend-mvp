@@ -2,6 +2,10 @@
 
 API REST para rede social de reporte de problemas urbanos. Cidadãos publicam reportes com foto; a prefeitura gerencia status e acompanha métricas no dashboard.
 
+## Base demonstrativa de Sorocaba
+
+O seed `npm run seed:reportes-demo` prepara 20 cenários fictícios, com 20 fotos licenciadas e 10 cidadãos de demonstração. Por padrão, ele apenas inspeciona o ambiente. Consulte [as instruções de execução e segurança](docs/reportes-demo.md) e [o resultado da execução com as contas, reportes e créditos](docs/reportes-demo-resultado.md).
+
 ## Edição de reportes e perfil
 
 Os endpoints autenticados `PATCH /api/reportes/:id` e `DELETE /api/reportes/:id` permitem editar/excluir apenas reportes do próprio cidadão. Reportes resolvidos não podem ser editados. A edição aceita `descricao`, `categoria`, `localizacao` e `foto` opcional via multipart; a exclusão retorna `204`.
